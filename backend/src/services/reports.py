@@ -10,6 +10,7 @@ from src.models.record import Pair
 from src.services.audit import record
 from src.services.crossover import METHOD
 from src.services.field import field_rows, route_or_error
+from src.services.sessions import snapshot_sessions
 from src.utils.serial import fingerprint
 
 WAKE_KEY = 'ramp:recalculate'
@@ -27,6 +28,7 @@ def create_run(plan_id, actor):
             'route': route,
             'plan': {'id': plan_id, 'edition': plan['edition'], 'min_pairs': plan['min_pairs'], 'gap_limit': format(plan['gap_limit'], '.2f')},
             'pairs': [Pair(**row).snapshot() for row in field_rows(db, route['code'])],
+            'sessions': snapshot_sessions(db, route['code']),
         }
         digest = fingerprint(snapshot)
         report = db.execute('INSERT INTO report (plan_id, created_by, snapshot, fingerprint) VALUES (%s,%s,%s,%s) '

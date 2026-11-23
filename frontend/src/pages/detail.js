@@ -1,5 +1,5 @@
 import { api } from '../api/client.js';
-import { comparison, diagnostics } from '../components/common/comparison.js';
+import { comparison, diagnostics, randomized } from '../components/common/comparison.js';
 import { empty, heading } from '../components/common/shell.js';
 import { decisions, states } from '../constants/domain.js';
 import { bindForm, notice } from '../hooks/forms.js';
@@ -43,6 +43,7 @@ export function detailPage(root, { report, user, refresh }) {
       ${metric('时期差估计 · 第 2 轮 − 第 1 轮', result.period, '序列等权，含路线熟悉等共同影响。')}
       ${metric('总体变化 · 第 2 轮 − 第 1 轮', result.raw_change, '实际样本人数加权的描述值。')}</dl>
     <div class="report-grid">${comparison(result)}${diagnostics(result, plan)}</div>
+    ${randomized(result)}
     <p class="report-boundary">估计依赖时期影响可相加、无实质差异性延续等假设。此报告用于安排复测或局部试挂。</p>
     ${reviewSection(report, user)}
     <details class="snapshot"><summary>计算快照与复现口径</summary><p>方法 <code>${e(result.method)}</code> · 参数版本 #${plan.id}</p><p>快照 SHA-256 <code>${e(report.fingerprint)}</code></p><p>Δ 为每组第 2 轮均值减第 1 轮均值。处理差 = (ΔAB − ΔBA) / 2，时期差 = (ΔAB + ΔBA) / 2。CSV 保留完整与缺测试走记录。</p></details>`;

@@ -7,12 +7,13 @@ import { pairsPage } from './pages/pairs.js';
 import { reportsPage } from './pages/reports.js';
 import { routesPage } from './pages/routes.js';
 import { runsPage } from './pages/runs.js';
+import { sessionsPage } from './pages/sessions.js';
 import { currentPage, go } from './router/hash.js';
 import { session } from './stores/session.js';
 import { e } from './utils/format.js';
 
 const root = document.querySelector('#app');
-const renderers = { routes: routesPage, pairs: pairsPage, runs: runsPage, reports: reportsPage, detail: detailPage };
+const renderers = { routes: routesPage, pairs: pairsPage, sessions: sessionsPage, runs: runsPage, reports: reportsPage, detail: detailPage };
 let version = 0;
 let poll;
 
@@ -21,8 +22,12 @@ async function load(page, id) {
   if (page === 'reports') return { reports: await api.reports() };
   const [route] = await api.routes();
   if (!route) return { route: null };
-  const [pairs, plans] = await Promise.all([api.pairs(route.code), page === 'runs' ? api.plans(route.code) : []]);
-  return { route, pairs, plans };
+  const [pairs, plans, sessions] = await Promise.all([
+    api.pairs(route.code),
+    page === 'runs' ? api.plans(route.code) : [],
+    page === 'sessions' ? api.sessions(route.code) : [],
+  ]);
+  return { route, pairs, plans, sessions };
 }
 
 async function render(refresh = false) {

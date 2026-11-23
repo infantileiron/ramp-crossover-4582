@@ -2,6 +2,7 @@ from decimal import Decimal
 from statistics import mean
 
 from src.constants.domain import Decision, Sequence
+from src.services.randomized import analyze_randomized
 
 METHOD = 'crossover.two-period.v1'
 
@@ -45,9 +46,11 @@ def analyze(snapshot):
     decisions = [Decision.RETEST, Decision.RETAIN]
     if not blocked and not gap_alert and not imbalanced and treatment < 0:
         decisions.append(Decision.PILOT)
+    randomized = analyze_randomized(snapshot.get('sessions') or [])
     return {
         'method': METHOD, 'groups': groups, 'complete': count, 'blocked': blocked,
         'raw_change': trend, 'treatment': treatment, 'period': period, 'sequence_gap': gap,
         'first_period': first_period, 'imbalance': imbalanced, 'sequence_alert': gap_alert,
+        'randomized': randomized,
         'alerts': alerts, 'decisions': decisions,
     }

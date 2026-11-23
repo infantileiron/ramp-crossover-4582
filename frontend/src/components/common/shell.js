@@ -2,7 +2,7 @@ import { roles } from '../../constants/domain.js';
 import { e } from '../../utils/format.js';
 
 const nav = [
-  ['routes', '↱', '路线与方案'], ['pairs', '▤', '配对记录'],
+  ['routes', '↱', '路线与方案'], ['pairs', '▤', '配对记录'], ['sessions', '⧉', '时段分组'],
   ['runs', '▷', '对照运行'], ['reports', '▧', '实验报告'],
 ];
 
