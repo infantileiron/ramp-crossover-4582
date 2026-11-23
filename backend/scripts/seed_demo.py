@@ -1,0 +1,52 @@
+import json
+
+from src.config.database import connect
+from src.utils.passwords import hash_password
+
+ACCOUNTS = (
+    ('reviewer', '程岚', 'reviewer', 'Review5215!'),
+    ('analyst', '沈栩', 'analyst', 'Analyze5215!'),
+    ('viewer', '陶桥', 'viewer', 'View5215!'),
+)
+ROUTE = (
+    'R07', '北门连廊坡道', '北门入口', '连廊平台', 86,
+    '由入口经过花坛岔口至连廊平台。两轮走同一条路线，期间更换岔口的指引。',
+    '文字箭头牌', '坡道图标牌',
+)
+PAIRS = (
+    ('AB01', 'AB', 60, 42), ('AB02', 'AB', 64, 52), ('AB03', 'AB', 75, 51),
+    ('AB04', 'AB', 70, 50), ('AB05', 'AB', 65, 49), ('AB06', 'AB', 68, 50),
+    ('AB07', 'AB', 72, None),
+    ('BA01', 'BA', 65, 69), ('BA02', 'BA', 76, 76), ('BA03', 'BA', 70, 74),
+    ('BA04', 'BA', 73, 73), ('BA05', 'BA', None, 79),
+)
+
+
+def seed():
+    with connect() as db, db.cursor() as cursor:
+        cursor.executemany(
+            'INSERT INTO app_user (username, display_name, role, password_hash) VALUES (%s,%s,%s,%s) '
+            'ON CONFLICT (username) DO NOTHING',
+            [(username, name, role, hash_password(password)) for username, name, role, password in ACCOUNTS],
+        )
+        cursor.execute('INSERT INTO field_route VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING', ROUTE)
+        cursor.executemany(
+            'INSERT INTO field_pair (route_code, code, sequence, period1, period2) VALUES (%s,%s,%s,%s,%s) '
+            'ON CONFLICT (route_code, code) DO NOTHING',
+            [(ROUTE[0], *row) for row in PAIRS],
+        )
+        cursor.execute(
+            'INSERT INTO analysis_plan (route_code, edition, min_pairs, gap_limit, created_by) '
+            "VALUES (%s,'现场初核',3,8,'analyst') ON CONFLICT (route_code, edition) DO NOTHING", (ROUTE[0],),
+        )
+        keys = {
+            'users': [row['username'] for row in db.execute('SELECT username FROM app_user ORDER BY username')],
+            'routes': [row['code'] for row in db.execute('SELECT code FROM field_route ORDER BY code')],
+            'pairs': [list(row.values()) for row in db.execute('SELECT route_code, code FROM field_pair ORDER BY route_code, code')],
+            'plans': [list(row.values()) for row in db.execute('SELECT route_code, edition FROM analysis_plan ORDER BY route_code, edition')],
+        }
+    print(json.dumps(keys, ensure_ascii=False, sort_keys=True))
+
+
+if __name__ == '__main__':
+    seed()

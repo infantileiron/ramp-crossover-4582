@@ -1,0 +1,88 @@
+name: ${COMPOSE_PROJECT_NAME:-ramp-crossover}
+
+x-app: &app
+  build: ./backend
+  image: ${COMPOSE_PROJECT_NAME:-ramp-crossover}-app:local
+  environment:
+    DATABASE_URL: postgresql://${POSTGRES_USER:-ramp}:${POSTGRES_PASSWORD:-ramp_local}@db:5432/${POSTGRES_DB:-ramp}
+    REDIS_URL: redis://redis:6379/0
+    JWT_SECRET: ${JWT_SECRET:-ramp-local-development-key-change-before-use}
+    SEED_DEMO: ${SEED_DEMO:-true}
+    EXPORT_DIR: /exports
+  volumes:
+    - exports:/exports
+
+services:
+  frontend:
+    build: ./frontend
+    container_name: ${COMPOSE_PROJECT_NAME:-ramp-crossover}-frontend
+    ports: ["127.0.0.1:${FRONTEND_PORT:-18284}:80"]
+    depends_on:
+      backend: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -qO-, 'http://127.0.0.1/api/health']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  backend:
+    <<: *app
+    container_name: ${COMPOSE_PROJECT_NAME:-ramp-crossover}-backend
+    command: [sh, /app/entrypoint.sh]
+    ports: ["127.0.0.1:${BACKEND_PORT:-19284}:8000"]
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, python, -m, src.utils.health, backend]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  worker:
+    <<: *app
+    container_name: ${COMPOSE_PROJECT_NAME:-ramp-crossover}-worker
+    command: [python, -m, src.worker]
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      backend: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, python, -m, src.utils.health, worker]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  db:
+    image: postgres:16-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-ramp-crossover}-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ramp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ramp_local}
+      POSTGRES_DB: ${POSTGRES_DB:-ramp}
+    ports: ["127.0.0.1:${DB_PORT:-17784}:5432"]
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -h 127.0.0.1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-ramp-crossover}-redis
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pg_data:
+  redis_data:
+  exports:
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${NETWORK_SUBNET:-10.221.215.0/24}
